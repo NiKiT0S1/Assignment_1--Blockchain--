@@ -49,9 +49,12 @@ def merkle_root(transactions):
         return hash(transactions[0])
 
     new_level = []
-    for i in range(0, len(transactions), 2):
+        for i in range(0, len(transactions), 2):
         left = transactions[i]
-        right = transactions[i + 1] if i + 1 < len(transactions) else transactions[i]
+        if i + 1 < len(transactions):
+            right = transactions[i + 1]
+        else:
+            right = transactions[i]
         new_level.append(hash(left + right))
 
     return merkle_root(new_level)
