@@ -62,10 +62,13 @@ def hash(text):
 
 # MERKLE TREE
 def merkle_root(transactions):
+    # Function to generate the Merkle root hash from a list of transactions
     if len(transactions) == 1:
         return hash(transactions[0])
 
     new_level = []
+
+    # Iterate through the transactions in pairs
     for i in range(0, len(transactions), 2):
         left = transactions[i]
         if i + 1 < len(transactions):
@@ -93,6 +96,7 @@ class Block:
 
     def mine_block(self, difficulty):
         prefix = '0' * difficulty
+        # Keep mining until the block's hash starts with the prefix
         while not self.hash.startswith(prefix):
             self.nonce += 1
             self.hash = self.calculate_hash()
@@ -101,14 +105,16 @@ class Block:
 # BLOCKCHAIN IMPLEMENTATION
 class Blockchain:
     def __init__(self, difficulty=4):
+
+        # Constructor for the Blockchain class
         self.chain = []
         self.difficulty = difficulty
-        self.create_genesis_block()
+        self.create_genesis_block() # Create the first block (genesis block)
 
     def create_genesis_block(self):
         genesis_block = Block("0", ["Genesis Block"])
         genesis_block.mine_block(self.difficulty)
-        self.chain.append(genesis_block)
+        self.chain.append(genesis_block) # Add the genesis block to the blockchain like the first block
 
     def add_block(self, transactions):
         if len(transactions) != 10:
@@ -122,7 +128,6 @@ class Blockchain:
         for i in range(1, len(self.chain)):
             current_block = self.chain[i]
             previous_block = self.chain[i - 1]
-
             if current_block.hash != current_block.calculate_hash():
                 return False
 
