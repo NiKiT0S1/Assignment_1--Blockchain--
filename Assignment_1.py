@@ -253,8 +253,12 @@ def main():
 
     # Simulate transactions and sign them
     transactions = []
+    receivers = ["Receiver_John", "Receiver_Alice", "Receiver_Bob", "Receiver_Susan", "Receiver_Mike", "Receiver_Linda",
+                 "Receiver_Tom", "Receiver_Eva", "Receiver_Peter", "Receiver_Lisa"]
+    amounts = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+
     for i in range(10):
-        transaction = [str(wallet.public_key), f"Receiver_{i}", f"Amount_{i}"]
+        transaction = [str(wallet.public_key), receivers[i], str(amounts[i])]
         signed_transaction = wallet.sign_transaction(transaction)
         transactions.append(signed_transaction)
 
