@@ -174,8 +174,18 @@ class Blockchain:
 
 # TEST BLOCKCHAIN
 if __name__ == "__main__":
-    rsa = RSA(61, 53)  # Example primes, should be larger in real scenarios
-    public_key, private_key = rsa.generate_keys()
+    # rsa = RSA(61, 53)  # Example primes, should be larger in real scenarios
+    # public_key, private_key = rsa.generate_keys()
+
+    participants = ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy"]
+
+    # Генерация уникальных пар ключей для каждого участника
+    keys = {participant: RSA(61, 53).generate_keys() for participant in participants}  # Пример малых простых чисел
+
+    print("Public Keys of Participants:")
+    for participant, (public_key, _) in keys.items():
+        print(f" {participant}: {public_key}")
+    print()
 
     blockchain = Blockchain()
 
@@ -192,11 +202,20 @@ if __name__ == "__main__":
         "Judy->Alice:9"
     ]
 
-    signed_transactions_1 = [
-        (tx, sign(private_key, tx)) for tx in transactions_1
-    ]
+    # signed_transactions_1 = [
+    #     (tx, sign(private_key, tx)) for tx in transactions_1
+    # ]
 
-    blockchain.add_block([f"{tx}:{signature}" for tx, signature in signed_transactions_1])
+    signed_transactions_1 = []
+    for tx in transactions_1:
+        sender, _, _ = tx.partition("->")
+        _, private_key = keys[sender]  # Получение приватного ключа отправителя
+        signature = sign(private_key, tx)  # Подпись транзакции
+        signed_transactions_1.append(f"{tx}:{signature}")
+
+    # blockchain.add_block([f"{tx}:{signature}" for tx, signature in signed_transactions_1])
+
+    blockchain.add_block(signed_transactions_1)
 
     for i, block in enumerate(blockchain.chain):
         print(f"Block {i}:")
