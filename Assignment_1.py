@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
     participants = ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy"]
 
-    # Генерация уникальных пар ключей для каждого участника
+    # Generate unique key pairs for each participant
     keys = {participant: RSA(61, 53).generate_keys() for participant in participants}  # Пример малых простых чисел
 
     print("Public Keys of Participants:")
@@ -206,11 +206,12 @@ if __name__ == "__main__":
     #     (tx, sign(private_key, tx)) for tx in transactions_1
     # ]
 
+    # Signing transactions with the appropriate private keys
     signed_transactions_1 = []
     for tx in transactions_1:
         sender, _, _ = tx.partition("->")
-        _, private_key = keys[sender]  # Получение приватного ключа отправителя
-        signature = sign(private_key, tx)  # Подпись транзакции
+        _, private_key = keys[sender]  # Getting the sender's private key
+        signature = sign(private_key, tx)  # Transaction signature
         signed_transactions_1.append(f"{tx}:{signature}")
 
     # blockchain.add_block([f"{tx}:{signature}" for tx, signature in signed_transactions_1])
