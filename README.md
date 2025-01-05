@@ -1,6 +1,6 @@
 # Assignment 1
 
-This project demonstrates a basic blockchain implementation in Python. The implementation does not rely on any external libraries and showcases simplified hashing, a Merkle tree, and mechanisms for mining and validating blocks.
+This project demonstrates a basic blockchain implementation in Python without using external libraries. It includes simplified hashing, a Merkle tree, a mechanism for mining and validating blocks, and an integration of RSA-based digital signatures for securing transactions.
 
 ---
 
@@ -25,6 +25,10 @@ Each block contains:
 ### 4. Mining and Validation
 - Blocks are mined by finding a hash that satisfies a given difficulty level (number of leading zeros).
 - Blockchain integrity is ensured through validation of hashes and block linkage.
+
+### 5. Digital Signatures
+- Implements RSA-based digital signatures to sign and verify transactions.
+- Ensures the authenticity and integrity of transactions in the blockchain.
 
 ---
 
@@ -133,18 +137,90 @@ class Blockchain:
         return True
 ```
 
-### 5. Main Execution
-Predefined transactions are added, blocks are mined, and the blockchain's integrity is validated.
+### 5. RSA Digital Signature
+Adds RSA-based digital signatures for signing and verifying transactions.
+
+```python
+class RSA:
+    def __init__(self, p, q):
+        self.n = p * q
+        self.phi = (p - 1) * (q - 1)
+        self.e = self.generate_e(self.phi)
+        self.d = self.modinv(self.e, self.phi)
+
+    def generate_e(self, phi):
+        for e in range(2, phi):
+            if math.gcd(e, phi) == 1:
+                return e
+        raise ValueError("No valid 'e' found")
+
+    def modinv(self, a, m):
+        m0, x0, x1 = m, 0, 1
+        while a > 1:
+            q = a // m
+            m, a = a % m, m
+            x0, x1 = x1 - q * x0, x0
+        return x1 + m0 if x1 < 0 else x1
+
+    def encrypt(self, plaintext, key):
+        e, n = key
+        return [pow(ord(char), e, n) for char in plaintext]
+
+    def decrypt(self, ciphertext, key):
+        d, n = key
+        return ''.join(chr(pow(char, d, n)) for char in ciphertext)
+
+    def generate_keys(self):
+        return (self.e, self.n), (self.d, self.n)
+
+def sign(private_key, document):
+    e, n = private_key
+    return [pow(ord(char), e, n) for char in document]
+
+def verify(public_key, document, signature):
+    d, n = public_key
+    decrypted_signature = ''.join(chr(pow(char, d, n)) for char in signature)
+    return decrypted_signature == document
+```
+
+### 6. Main Execution
+Transactions are signed using RSA, blocks are mined, and the blockchain's integrity is validated.
 
 ```python
 if __name__ == "__main__":
+    participants = ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy"]
+
+    keys = {participant: RSA(61, 53).generate_keys() for participant in participants}  # Пример малых простых чисел
+
+    print("Public Keys of Participants:")
+    for participant, (public_key, _) in keys.items():
+        print(f" {participant}: {public_key}")
+    print()
+
     blockchain = Blockchain()
 
-    transactions_1 = [...]
-    transactions_2 = [...]
+    transactions_1 = [
+        "Alice->Bob:10",
+        "Bob->Charlie:5",
+        "Charlie->Dave:7",
+        "Dave->Eve:3",
+        "Eve->Frank:8",
+        "Frank->Grace:2",
+        "Grace->Heidi:1",
+        "Heidi->Ivan:6",
+        "Ivan->Judy:4",
+        "Judy->Alice:9"
+    ]
 
-    blockchain.add_block(transactions_1)
-    blockchain.add_block(transactions_2)
+    signed_transactions_1 = []
+    for tx in transactions_1:
+        sender, _, _ = tx.partition("->")
+        _, private_key = keys[sender]
+        signature = sign(private_key, tx)
+        signed_transactions_1.append(f"{tx}:{signature}")
+
+
+    blockchain.add_block(signed_transactions_1)
 
     for i, block in enumerate(blockchain.chain):
         print(f"Block {i}:")
@@ -159,12 +235,13 @@ if __name__ == "__main__":
 ---
 
 ## Output
-- Displays details of each block, including hashes, transactions, and Merkle roots.
-- Indicates whether the blockchain is valid.
+- Displays details of each block, including hashes, signed transactions, Merkle roots, and other metadata.
+- Indicates whether the blockchain is valid and verifies the integrity of the RSA signatures.
 
 ---
 
 ## Customization
 - Adjust mining difficulty by modifying the `difficulty` parameter in the `Blockchain` constructor.
-- Add or modify transactions to test blockchain functionality.
+- Add or modify transactions with appropriate RSA key pairs to test blockchain functionality.
+- Generate new RSA key pairs for participants to sign and verify transactions securely.
 
