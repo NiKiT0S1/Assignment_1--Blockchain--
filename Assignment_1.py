@@ -1,11 +1,55 @@
 import time
-from math import gcd
-import json
+# from math import gcd
+# import json
+import math
+# import random
 
+
+# RSA Encryption Implementation
+class RSA:
+    def __init__(self, p, q):
+        self.n = p * q
+        self.phi = (p - 1) * (q - 1)
+        self.e = self.generate_e(self.phi)
+        self.d = self.modinv(self.e, self.phi)
+
+    def generate_e(self, phi):
+        for e in range(2, phi):
+            if math.gcd(e, phi) == 1:
+                return e
+        raise ValueError("No valid 'e' found")
+
+    def modinv(self, a, m):
+        m0, x0, x1 = m, 0, 1
+        while a > 1:
+            q = a // m
+            m, a = a % m, m
+            x0, x1 = x1 - q * x0, x0
+        return x1 + m0 if x1 < 0 else x1
+
+    def encrypt(self, plaintext, key):
+        e, n = key
+        return [pow(ord(char), e, n) for char in plaintext]
+
+    def decrypt(self, ciphertext, key):
+        d, n = key
+        return ''.join(chr(pow(char, d, n)) for char in ciphertext)
+
+    def generate_keys(self):
+        return (self.e, self.n), (self.d, self.n)
+
+# Digital Signature Implementation
+def sign(private_key, document):
+    e, n = private_key
+    return [pow(ord(char), e, n) for char in document]
+
+def verify(public_key, document, signature):
+    d, n = public_key
+    decrypted_signature = ''.join(chr(pow(char, d, n)) for char in signature)
+    return decrypted_signature == document
 
 # HASHING ALGORITHM (SHA-256 simplified without libraries)
 def hash(text):
-    # Циклический сдвиг битов (старшие переходят в младшие)
     def rotate_right(x, n):
         return ((x >> n) | (x << (32 - n))) & 0xFFFFFFFF
 
@@ -23,7 +67,6 @@ def hash(text):
         ]
 
         w = [0] * 64
-        # Converting a block of data (4 bytes each) to 16 words
         for i in range(16):
             w[i] = int.from_bytes(chunk[i * 4:(i + 1) * 4], 'big')
         for i in range(16, 64):
@@ -31,11 +74,9 @@ def hash(text):
             s1 = rotate_right(w[i - 2], 17) ^ rotate_right(w[i - 2], 19) ^ (w[i - 2] >> 10)
             w[i] = (w[i - 16] + s0 + w[i - 7] + s1) & 0xFFFFFFFF
 
-        # Initializing hash values for the current block
         a, b, c, d, e, f, g, h0 = h
 
         for i in range(64):
-            # Циклический сдвиг
             S1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25)
             ch = (e & f) ^ (~e & g)
             temp1 = (h0 + S1 + ch + k[i] + w[i]) & 0xFFFFFFFF
@@ -43,108 +84,43 @@ def hash(text):
             maj = (a & b) ^ (a & c) ^ (b & c)
             temp2 = (S0 + maj) & 0xFFFFFFFF
 
-            # Updating hash values
             h0, g, f, e, d, c, b, a = g, f, e, (d + temp1) & 0xFFFFFFFF, c, b, a, (temp1 + temp2) & 0xFFFFFFFF
 
-        # Returning updated hash values
         return [(x + y) & 0xFFFFFFFF for x, y in zip(h, [a, b, c, d, e, f, g, h0])]
 
-    # initial values for hashing
     h = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     ]
 
-    # Converting text to an array of bytes
     data = bytearray(text, 'utf-8')
     length = len(data) * 8
     data.append(0x80)
-    # Дополняем данные, чтобы убедиться, что они кратны 64 байтам
     while (len(data) % 64) != 56:
         data.append(0)
     data += length.to_bytes(8, 'big')
 
-    # Обрабатывайте каждый 64-байтовый фрагмент данных
     for chunk_index in range(0, len(data), 64):
         chunk = data[chunk_index:chunk_index + 64]
         h = sha256_compression(chunk, h)
 
-    # Преобразуйте конечные хэш-значения в шестнадцетеричную строку
     return ''.join(f'{value:08x}' for value in h)
-
-
-# RSA IMPLEMENTATION
-def gcd_extended(a, b):
-    if a == 0:
-        return b, 0, 1
-    gcd, x1, y1 = gcd_extended(b % a, a)
-    x = y1 - (b // a) * x1
-    y = x1
-    return gcd, x, y
-
-
-def mod_inverse(e, phi):
-    gcd, x, _ = gcd_extended(e, phi)
-    if gcd != 1:
-        raise ValueError("Modular inverse does not exist")
-    return x % phi
-
-
-def generate_keys():
-    # Choose two prime numbers (for simplicity)
-    p = 61
-    q = 53
-    n = p * q
-    phi = (p - 1) * (q - 1)
-
-    e = 17  # Public exponent (choose a prime that is coprime with phi)
-    d = mod_inverse(e, phi)
-
-    return ((e, n), (d, n))  # Public key, Private key
-
-
-def encrypt_rsa(public_key, plaintext):
-    e, n = public_key
-    ciphertext = [pow(ord(char), e, n) for char in plaintext]
-    return ciphertext
-
-
-def decrypt_rsa(private_key, ciphertext):
-    d, n = private_key
-    plaintext = ''.join(chr(pow(char, d, n)) for char in ciphertext)
-    return plaintext
-
-
-# DIGITAL SIGNATURE
-def sign(private_key, document):
-    hashed = hash(document)
-    return encrypt_rsa(private_key, hashed)
-
-
-def verify(public_key, document, signature):
-    decrypted_hash = decrypt_rsa(public_key, signature)
-    return decrypted_hash == hash(document)
-
 
 # MERKLE TREE
 def merkle_root(transactions):
-    # Function to generate the Merkle root hash from a list of transactions
     if len(transactions) == 1:
         return hash(transactions[0])
 
-    new_level = []  # Reduced hash level
-    # Iterate through the transactions in pairs
+    new_level = []
     for i in range(0, len(transactions), 2):
-        left = str(transactions[i])  # Ensure it's a string before concatenating
+        left = transactions[i]
         if i + 1 < len(transactions):
-            right = str(transactions[i + 1])  # Ensure it's a string before concatenating
+            right = transactions[i + 1]
         else:
-            right = left  # If odd number of transactions, duplicate the last one
-        # Ensure the transactions are properly concatenated into strings before hashing
-        new_level.append(hash(left + right))  # Concatenating the transactions to form a string
+            right = transactions[i]
+        new_level.append(hash(left + right))
 
     return merkle_root(new_level)
-
 
 # EACH BLOCK
 class Block:
@@ -162,23 +138,21 @@ class Block:
 
     def mine_block(self, difficulty):
         prefix = '0' * difficulty
-        # Keep mining until the block's hash starts with the prefix
         while not self.hash.startswith(prefix):
             self.nonce += 1
             self.hash = self.calculate_hash()
-
 
 # BLOCKCHAIN IMPLEMENTATION
 class Blockchain:
     def __init__(self, difficulty=4):
         self.chain = []
         self.difficulty = difficulty
-        self.create_genesis_block()  # Create the first block (genesis block)
+        self.create_genesis_block()
 
     def create_genesis_block(self):
         genesis_block = Block("0", ["Genesis Block"])
         genesis_block.mine_block(self.difficulty)
-        self.chain.append(genesis_block)  # Add the genesis block to the blockchain like the first block
+        self.chain.append(genesis_block)
 
     def add_block(self, transactions):
         if len(transactions) != 10:
@@ -194,92 +168,41 @@ class Blockchain:
             previous_block = self.chain[i - 1]
             if current_block.hash != current_block.calculate_hash():
                 return False
-
             if current_block.previous_hash != previous_block.hash:
                 return False
-
         return True
 
-    # Load transactions from a file into a block
-    def load_transactions_and_add_block(self, filename):
-        wallet = Wallet()  # This would be any wallet that can load transactions
-        transactions = wallet.load_transactions(filename)
+# TEST BLOCKCHAIN
+if __name__ == "__main__":
+    rsa = RSA(61, 53)  # Example primes, should be larger in real scenarios
+    public_key, private_key = rsa.generate_keys()
 
-        if len(transactions) == 10:
-            self.add_block(transactions)
-        else:
-            print(f"Invalid number of transactions in the file: {len(transactions)}. Expected 10.")
-
-
-# WALLET with file I/O functionality
-class Wallet:
-    def __init__(self):
-        self.private_key, self.public_key = generate_keys()
-
-    def sign_transaction(self, transaction):
-        document = f"{transaction[0]}->{transaction[1]}:{transaction[2]}"
-        signature = sign(self.private_key, document)
-        return transaction + [signature]
-
-    def load_transactions(self, filename):
-        transactions = []
-        with open(filename, 'r') as file:
-            for line in file:
-                transaction = line.strip().split(',')
-                transaction = list(map(str, transaction))
-                transactions.append(transaction)
-        return transactions
-
-
-# Verify transaction using the public key
-def verify_transaction(public_key, transaction):
-    document = f"{transaction[0]}->{transaction[1]}:{transaction[2]}"
-
-    if not verify(public_key, document, transaction[3]):
-        raise ValueError("Signature is wrong")
-
-    if document != f"{transaction[0]}->{transaction[1]}:{transaction[2]}":
-        raise ValueError("Document is wrong")
-
-    return True
-
-
-# TESTING THE BLOCKCHAIN WITH TRANSACTIONS AND VERIFICATION
-def main():
     blockchain = Blockchain()
 
-    # Create a wallet
-    wallet = Wallet()
+    transactions_1 = [
+        "Alice->Bob:10",
+        "Bob->Charlie:5",
+        "Charlie->Dave:7",
+        "Dave->Eve:3",
+        "Eve->Frank:8",
+        "Frank->Grace:2",
+        "Grace->Heidi:1",
+        "Heidi->Ivan:6",
+        "Ivan->Judy:4",
+        "Judy->Alice:9"
+    ]
 
-    # Simulate transactions and sign them
-    transactions = []
-    receivers = ["Receiver_John", "Receiver_Alice", "Receiver_Bob", "Receiver_Susan", "Receiver_Mike", "Receiver_Linda",
-                 "Receiver_Tom", "Receiver_Eva", "Receiver_Peter", "Receiver_Lisa"]
-    amounts = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    signed_transactions_1 = [
+        (tx, sign(private_key, tx)) for tx in transactions_1
+    ]
 
-    for i in range(10):
-        transaction = [str(wallet.public_key), receivers[i], str(amounts[i])]
-        signed_transaction = wallet.sign_transaction(transaction)
-        transactions.append(signed_transaction)
+    blockchain.add_block([f"{tx}:{signature}" for tx, signature in signed_transactions_1])
 
-    # Add transactions as a block
-    blockchain.add_block(transactions)
+    for i, block in enumerate(blockchain.chain):
+        print(f"Block {i}:")
+        print(f" Previous Hash: {block.previous_hash}")
+        print(f" Transactions: {block.transactions}")
+        print(f" Merkle Root Hash: {block.merkle_root}")
+        print(f" Hash: {block.hash}\n")
 
-    # Verify blockchain validity
-    if blockchain.validate_blockchain():
-        print("Blockchain is valid!")
-
-        # Display transactions in each block
-        for idx, block in enumerate(blockchain.chain):
-            print(f"Block {idx}:")
-            print(f" Previous Hash: {block.previous_hash}")
-            for tx in block.transactions:
-                print(f"  Transaction: {tx[:3]} | Signature: {tx[3]}")
-            print(f" Merkle Root Hash: {block.merkle_root}")
-            print(f" Hash: {block.hash}\n")
-    else:
-        print("Blockchain is invalid!")
-
-
-if __name__ == "__main__":
-    main()
+    print("Is the blockchain correct?", blockchain.validate_blockchain())
