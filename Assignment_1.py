@@ -7,18 +7,24 @@ import math
 
 # RSA Encryption Implementation
 class RSA:
+    # We given two prime numbers(p and q) to find product of "n"
+    # "n" - it is encryption/decryption functions
     def __init__(self, p, q):
         self.n = p * q
         self.phi = (p - 1) * (q - 1)
         self.e = self.generate_e(self.phi)
         self.d = self.modinv(self.e, self.phi)
 
+    # We find "e" for "encrypt" function, where numbers are coprime
+    # Values starting from 2 are iterated over "phi"
     def generate_e(self, phi):
         for e in range(2, phi):
             if math.gcd(e, phi) == 1:
                 return e
         raise ValueError("No valid 'e' found")
 
+    # Realizing Euclidean algorithm
+    # for find the inverse element "d" for "decrypt" function
     def modinv(self, a, m):
         m0, x0, x1 = m, 0, 1
         while a > 1:
@@ -27,22 +33,30 @@ class RSA:
             x0, x1 = x1 - q * x0, x0
         return x1 + m0 if x1 < 0 else x1
 
+    # Encryption(Шифрование) string plaintext (it is transaction) using private key(e, n)
     def encrypt(self, plaintext, key):
         e, n = key
+        # Each character is converted to an ASCII code.
         return [pow(ord(char), e, n) for char in plaintext]
 
+    # Decryption(Расшифровка) numbers from ciphertext
     def decrypt(self, ciphertext, key):
         d, n = key
         return ''.join(chr(pow(char, d, n)) for char in ciphertext)
 
+    # Generate a key pair
+    # (e, n -- public key; d, n --- private key)
     def generate_keys(self):
         return (self.e, self.n), (self.d, self.n)
 
 # Digital Signature Implementation
+# Here our value from transaction signed by private key
 def sign(private_key, document):
     e, n = private_key
     return [pow(ord(char), e, n) for char in document]
 
+# Signature verification:
+# decrypt the signature with the public key and compare it with the original document
 def verify(public_key, document, signature):
     d, n = public_key
     decrypted_signature = ''.join(chr(pow(char, d, n)) for char in signature)
@@ -180,7 +194,7 @@ if __name__ == "__main__":
     participants = ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank", "Grace", "Heidi", "Ivan", "Judy"]
 
     # Generate unique key pairs for each participant
-    keys = {participant: RSA(61, 53).generate_keys() for participant in participants}  # Пример малых простых чисел
+    keys = {participant: RSA(61, 53).generate_keys() for participant in participants}  # Example small prime numbers
 
     print("Public Keys of Participants:")
     for participant, (public_key, _) in keys.items():
@@ -208,9 +222,13 @@ if __name__ == "__main__":
 
     # Signing transactions with the appropriate private keys
     signed_transactions_1 = []
+    # tx - it is plaintext
     for tx in transactions_1:
         sender, _, _ = tx.partition("->")
         _, private_key = keys[sender]  # Getting the sender's private key
+        # Create cirhertext by plaintext
+        # (Транзакция, принятая plaintext, шифруется с использованием private_key,
+        # и создает cirheptext)
         signature = sign(private_key, tx)  # Transaction signature
         signed_transactions_1.append(f"{tx}:{signature}")
 
