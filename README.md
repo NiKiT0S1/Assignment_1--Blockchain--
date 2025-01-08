@@ -1,4 +1,4 @@
-# Assignment 1
+# Assignment 2
 
 This project demonstrates a basic blockchain implementation in Python without using external libraries. It includes simplified hashing, a Merkle tree, a mechanism for mining and validating blocks, and an integration of RSA-based digital signatures for securing transactions.
 
